@@ -42,7 +42,12 @@ instance Functor ExactlyOne where
     -> ExactlyOne a
     -> ExactlyOne b
   (<$>) =
-    error "todo: Course.Functor (<$>)#instance ExactlyOne"
+    \f ea ->
+      let a = runExactlyOne ea
+          b = f a
+      in ExactlyOne b
+    -- ExactlyOne . f . runExactlyOne
+
 
 -- | Maps a function on the List functor.
 --
@@ -57,7 +62,9 @@ instance Functor List where
     -> List a
     -> List b
   (<$>) =
-    error "todo: Course.Functor (<$>)#instance List"
+    \f -> foldRight (((:.) . f) ) Nil
+    -- \f -> map f
+    -- map
 
 -- | Maps a function on the Optional functor.
 --
@@ -84,7 +91,11 @@ instance Functor ((->) t) where
     -> ((->) t a)
     -> ((->) t b)
   (<$>) =
-    error "todo: Course.Functor (<$>)#((->) t)"
+    -- \f g ->
+      -- \t -> f (g t)
+      -- f . g
+      -- (.) f g
+      (.)
 
 -- | Anonymous map. Maps a constant value on a functor.
 --
