@@ -18,12 +18,12 @@ import qualified Prelude as P(fmap)
 --
 -- * The law of composition
 --   `∀f g x.(f . g <$> x) ≅ (f <$> (g <$> x))`
-class Functor f where
+class Functor k where
   -- Pronounced, eff-map.
   (<$>) ::
     (a -> b)
-    -> f a
-    -> f b
+    -> k a
+    -> k b
 
 infixl 4 <$>
 
@@ -79,7 +79,11 @@ instance Functor Optional where
     -> Optional a
     -> Optional b
   (<$>) =
-    error "todo: Course.Functor (<$>)#instance Optional"
+     \f oa ->
+      case oa of 
+        Empty   -> Empty
+        (Full a)  -> Full (f a)
+    -- mapOptional
 
 -- | Maps a function on the reader ((->) t) functor.
 --
@@ -106,12 +110,18 @@ instance Functor ((->) t) where
 --
 -- prop> \x q -> x <$ Full q == Full x
 (<$) ::
-  Functor f =>
+  Functor k =>
   a
-  -> f b
-  -> f a
+  -> k b
+  -> k a
 (<$) =
-  error "todo: Course.Functor#(<$)"
+  -- \a -> \kb -> (\b -> a) <$> kb
+  -- \a -> \kb -> const a <$> kb
+  -- \a -> \kb -> (<$>) const a kb
+  -- \a -> (<$>) const a
+  (<$>) . const
+
+
 
 -- | Anonymous map producing unit value.
 --
@@ -130,8 +140,9 @@ void ::
   Functor f =>
   f a
   -> f ()
-void =
-  error "todo: Course.Functor#void"
+void fa =
+  -- (\_ -> ()) <$> fa
+  () <$ fa  
 
 -----------------------
 -- SUPPORT LIBRARIES --

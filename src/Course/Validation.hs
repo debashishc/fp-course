@@ -18,6 +18,7 @@ import Course.Core
 data Validation a = Error Err | Value a
   deriving (Eq, Show)
 
+-- type alias
 type Err = P.String
 
 -- | Returns whether or not the given validation is an error.

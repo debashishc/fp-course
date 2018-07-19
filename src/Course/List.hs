@@ -42,6 +42,23 @@ infixr 5 :.
 instance Show t => Show (List t) where
   show = show . foldRight (:) []
 
+
+class ThingsThatMap k where
+  howtodomap :: (a -> b) -> k a -> k b
+
+instance ThingsThatMap Optional where
+  howtodomap _ Empty    = Empty
+  howtodomap f (Full a) = Full (f a)
+
+instance ThingsThatMap List where
+  howtodomap f    = foldRight ((:.) . f) Nil
+
+-- LOOKUP command :kind
+instance ThingsThatMap ((->) t) where
+  -- (a -> b) -> (t -> a) -> (t -> b)
+  howtodomap = (.) --a2b t2a = \t -> a2b (t2a t)
+
+
 -- The list of integers from zero to infinity.
 infinity ::
   List Integer
@@ -282,8 +299,9 @@ flattenAgain =
 seqOptional ::
   List (Optional a)
   -> Optional (List a)
-seqOptional =
-  error "todo: Course.List#seqOptional"
+seqOptional = 
+  foldRight (twiceOptional (:.)) (Full Nil)
+  
 
 -- | Find the first element in the list matching the predicate.
 --
@@ -306,12 +324,11 @@ find ::
   -> List a
   -> Optional a
 find =
-  \p l-> 
-    case l of
-      Nil       -> Empty
-      (:.) x xs -> (if p x then (Full x) else find p xs)
--- find p list =
---   foldRight (\(x :. xs) -> if p x then (Full x) else _) Nil -X
+  -- \p l-> 
+  --   case l of
+  --     Nil       -> Empty
+  --     (:.) x xs -> (if p x then (Full x) else find p xs)
+  \p -> foldRight (\a as -> if p a then (Full a) else as) Empty
   
   
 
@@ -349,8 +366,10 @@ reverse ::
   List a
   -> List a
 reverse =
-  foldLeft (\r el -> (:.) el r) Nil
-  -- foldLeft (flip (:.)) Nil
+  -- foldLeft (\r el -> (:.) el r) Nil
+  -- foldLeft (\r el -> flip (:.) r el) Nil
+  -- foldLeft (\r -> flip (:.) r) Nil
+  foldLeft (flip (:.)) Nil
 
 -- reverse0 ::
 --   List a

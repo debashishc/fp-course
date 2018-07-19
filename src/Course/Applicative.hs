@@ -27,13 +27,13 @@ import qualified Prelude as P(fmap, return, (>>=))
 -- * The law of composition
 --   `∀u v w. pure (.) <*> u <*> v <*> w ≅ u <*> (v <*> w)`
 
-class Functor f => Applicative f where
+class Functor k => Applicative k where
   pure ::
-    a -> f a
+    a -> k a
   (<*>) ::
-    f (a -> b)
-    -> f a
-    -> f b
+    k (a -> b)
+    -> k a
+    -> k b
 
 infixl 4 <*>
 
@@ -67,13 +67,19 @@ instance Applicative List where
     a
     -> List a
   pure =
-    error "todo: Course.Applicative pure#instance List"
+    -- \x -> (:.) x Nil
+    -- \x -> flip (:.) Nil x
+    flip (:.) Nil
   (<*>) ::
     List (a -> b)
     -> List a
     -> List b
   (<*>) =
-    error "todo: Course.Apply (<*>)#instance List"
+    -- \fab la -> case fab of
+    --   Nil       ->  Nil
+    --   (f :. fs) -> (++) (map f la) ((<*>) fs la)
+    \fab -> \a -> flatMap (\f' -> map f' a) fab
+
 
 -- | Insert into an Optional.
 --
@@ -92,13 +98,18 @@ instance Applicative Optional where
     a
     -> Optional a
   pure =
-    error "todo: Course.Applicative pure#instance Optional"
+    Full
   (<*>) ::
     Optional (a -> b)
     -> Optional a
     -> Optional b
   (<*>) =
-    error "todo: Course.Apply (<*>)#instance Optional"
+    \oab oa -> 
+      -- case oab of
+      --   Empty    -> Empty
+      --   Full f   -> mapOptional f oa
+    bindOptional _1 oa
+
 
 -- | Insert into a constant function.
 --
@@ -121,15 +132,16 @@ instance Applicative Optional where
 instance Applicative ((->) t) where
   pure ::
     a
-    -> ((->) t a)
-  pure =
-    error "todo: Course.Applicative pure#((->) t)"
+    -> (t -> a)
+  pure = 
+    \a _ -> a
   (<*>) ::
-    ((->) t (a -> b))
-    -> ((->) t a)
-    -> ((->) t b)
+    ( t -> (a -> b))
+    -> ( t -> a)
+    -> ( t -> b)
   (<*>) =
-    error "todo: Course.Apply (<*>)#instance ((->) t)"
+    \f g ->
+      \t -> f t (g t)
 
 
 -- | Apply a binary function in the environment.
@@ -152,13 +164,13 @@ instance Applicative ((->) t) where
 -- >>> lift2 (+) length sum (listh [4,5,6])
 -- 18
 lift2 ::
-  Applicative f =>
+  Applicative k =>
   (a -> b -> c)
-  -> f a
-  -> f b
-  -> f c
+  -> k a
+  -> k b
+  -> k c
 lift2 =
-  error "todo: Course.Applicative#lift2"
+  \a2b2c ka kb -> a2b2c <$> ka <*> kb
 
 -- | Apply a ternary function in the environment.
 -- /can be written using `lift2` and `(<*>)`./
@@ -184,14 +196,14 @@ lift2 =
 -- >>> lift3 (\a b c -> a + b + c) length sum product (listh [4,5,6])
 -- 138
 lift3 ::
-  Applicative f =>
+  Applicative k =>
   (a -> b -> c -> d)
-  -> f a
-  -> f b
-  -> f c
-  -> f d
-lift3 =
-  error "todo: Course.Applicative#lift3"
+  -> k a
+  -> k b
+  -> k c
+  -> k d
+lift3 a2b2c2d ja jb jc =
+  lift2 a2b2c2d ja jb <*> jc
 
 -- | Apply a quaternary function in the environment.
 -- /can be written using `lift3` and `(<*>)`./
@@ -224,8 +236,8 @@ lift4 ::
   -> f c
   -> f d
   -> f e
-lift4 =
-  error "todo: Course.Applicative#lift4"
+lift4 a2b2c2d2e ja jb jc jd=
+  lift3 a2b2c2d2e ja jb jc <*> jd
 
 -- | Apply a nullary function in the environment.
 lift0 ::
@@ -233,7 +245,7 @@ lift0 ::
   a
   -> f a
 lift0 =
-  error "todo: Course.Applicative#lift0"
+  undefined
 
 -- | Apply a unary function in the environment.
 -- /can be written using `lift0` and `(<*>)`./
@@ -247,12 +259,12 @@ lift0 =
 -- >>> lift1 (+1) (1 :. 2 :. 3 :. Nil)
 -- [2,3,4]
 lift1 ::
-  Applicative f =>
+  Applicative k =>
   (a -> b)
-  -> f a
-  -> f b
-lift1 =
-  error "todo: Course.Applicative#lift1"
+  -> k a
+  -> k b
+lift1 f x =
+  pure f <*> x
 
 -- | Apply, discarding the value of the first argument.
 -- Pronounced, right apply.
@@ -278,7 +290,7 @@ lift1 =
   -> f b
   -> f b
 (*>) =
-  error "todo: Course.Applicative#(*>)"
+  lift2 (const id)
 
 -- | Apply, discarding the value of the second argument.
 -- Pronounced, left apply.
@@ -304,7 +316,7 @@ lift1 =
   -> f a
   -> f b
 (<*) =
-  error "todo: Course.Applicative#(<*)"
+  lift2 const
 
 -- | Sequences a list of structures to a structure of list.
 --
@@ -323,11 +335,13 @@ lift1 =
 -- >>> sequence ((*10) :. (+2) :. Nil) 6
 -- [60,8]
 sequence ::
-  Applicative f =>
-  List (f a)
-  -> f (List a)
-sequence =
-  error "todo: Course.Applicative#sequence"
+  Applicative k =>
+  List (k a)
+  -> k (List a)
+-- sequence Nil      = pure Nil
+-- sequence (h :. t) = lift2 (:.) h (sequence t)
+sequence = foldRight (lift2 (:.)) (pure Nil)
+-- the essence of the iterator pattern - Jeremy Gibbons
 
 -- | Replicate an effect a given number of times.
 --
