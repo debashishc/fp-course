@@ -108,7 +108,7 @@ instance Applicative Optional where
       -- case oab of
       --   Empty    -> Empty
       --   Full f   -> mapOptional f oa
-    bindOptional _1 oa
+    bindOptional (\f -> mapOptional f oa) oab
 
 
 -- | Insert into a constant function.
@@ -241,9 +241,9 @@ lift4 a2b2c2d2e ja jb jc jd=
 
 -- | Apply a nullary function in the environment.
 lift0 ::
-  Applicative f =>
+  Applicative k =>
   a
-  -> f a
+  -> k a
 lift0 =
   undefined
 
